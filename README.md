@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://PetsRegistry.dev/projects/REPLACE_WITH_PROJECT_ID
+**URL**: https://petsregistry.org/
 
 ## How can I edit this code?
 
@@ -10,7 +10,7 @@ There are several ways of editing your application.
 
 **Use PetsRegistry**
 
-Simply visit the [PetsRegistry Project](https://PetsRegistry.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Simply visit the [PetsRegistry Project](https://petsregistry.org/) and start prompting.
 
 Changes made via PetsRegistry will be committed automatically to this repo.
 

@@ -32,7 +32,7 @@ const Footer = () => {
               <li><Link to="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
-          <div className="text-center">
+          <div className="text-center"> 
             <h4 className="font-display font-semibold text-foreground">Contact</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>info@petsregistry.org</li>
