@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="border-t border-border bg-card">
       <div className="container py-12">
         <div className="grid gap-8 grid-cols-1 sm:grid-cols-4">
-          <div className="text-center">
+          <div className="text-center sm:text-left">
             <Link to="/" className="flex items-center">
               <img src={logo} alt="Pets Registry" className="h-9 w-auto" width={132} height={36} />
             </Link>
@@ -15,7 +15,7 @@ const Footer = () => {
               Register your pets, keep them safe, and help reunite lost pets with their owners.
             </p>
           </div>
-          <div className="text-center">
+          <div className="text-center sm:text-left">
             <h4 className="font-display font-semibold text-foreground">Quick Links</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li><Link to="/store" className="hover:text-primary transition-colors">Store</Link></li>
@@ -25,14 +25,14 @@ const Footer = () => {
               <li><Link to="/register" className="hover:text-primary transition-colors">Sign Up</Link></li>
             </ul>
           </div>
-          <div className="text-center">
+          <div className="text-center sm:text-left">
             <h4 className="font-display font-semibold text-foreground">Support</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
               <li><Link to="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
-          <div className="text-center"> 
+          <div className="text-center sm:text-left"> 
             <h4 className="font-display font-semibold text-foreground">Contact</h4>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>info@petsregistry.org</li>

@@ -19,19 +19,32 @@ const SearchPage = () => {
   const [showScanner, setShowScanner] = useState(false);
   const navigate = useNavigate();
 
+  // const { data: pets = [], isLoading } = useQuery({
+  //   queryKey: ["search-pets", query],
+  //   queryFn: async () => {
+  //     let q = supabase.from("pets").select("*, pet_images(image_url, sort_order)").order("created_at", { ascending: false }).limit(50);
+  //     if (query.trim()) {
+  //       q = q.or(`name.ilike.%${query}%,species.ilike.%${query}%,breed.ilike.%${query}%,id.ilike.%${query}%,microchip_number.ilike.%${query}%,pet_code.ilike.%${query}%`);
+  //     }
+  //     const { data, error } = await q;
+  //     if (error) throw error;
+  //     return data;
+  //   },
+  // });
+
   const { data: pets = [], isLoading } = useQuery({
     queryKey: ["search-pets", query],
     queryFn: async () => {
       let q = supabase.from("pets").select("*, pet_images(image_url, sort_order)").order("created_at", { ascending: false }).limit(50);
       if (query.trim()) {
-        q = q.or(`name.ilike.%${query}%,species.ilike.%${query}%,breed.ilike.%${query}%,id.ilike.%${query}%,microchip_number.ilike.%${query}%,pet_code.ilike.%${query}%`);
+        q = q.or(`name.ilike.%${query}%,species.ilike.%${query}%,breed.ilike.%${query}%,microchip_number.ilike.%${query}%,pet_code.ilike.%${query}%`);
       }
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
   });
-
+  
   const handleScanResult = useCallback((err: any, result: any) => {
     if (result) {
       const scannedText = result.getText();
