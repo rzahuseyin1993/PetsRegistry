@@ -74,9 +74,9 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 
 ## Screenshots
 
-![Home](assets/screenshots/home.png)
-![Store](assets/screenshots/store.png)
-![AI-export](assets/screenshots/AI-export.png)
-![donate](assets/screenshots/donate.png)
-![LostPets](assets/screenshots/LostPets.png)
-![registerPet](assets/screenshots/registerPet.png)
+![Home](screenshots/home.png)
+![Store](screenshots/store.png)
+![AI-export](screenshots/AI-export.png)
+![donate](screenshots/donate.png)
+![LostPets](screenshots/LostPets.png)
+![registerPet](screenshots/registerPet.png)
