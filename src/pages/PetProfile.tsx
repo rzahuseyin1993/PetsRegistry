@@ -128,17 +128,52 @@ const PetProfile = () => {
                 {/* Details Card */}
                 <Card className="mt-6 border-border">
                   <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <h1 className="font-display text-3xl font-bold text-foreground">{pet.name}</h1>
-                      <Badge variant="outline" className={statusStyles[pet.status]}>{pet.status}</Badge>
-                    </div>
-                    <p className="text-muted-foreground">{pet.species}{pet.breed ? ` · ${pet.breed}` : ""}</p>
                     <div className="mt-4 grid grid-cols-2 gap-3">
-                      {pet.age && <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Calendar className="h-4 w-4 text-primary" /><span className="text-muted-foreground">Age:</span><span className="font-medium">{pet.age}</span></div>}
-                      {pet.color && <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Palette className="h-4 w-4 text-primary" /><span className="text-muted-foreground">Color:</span><span className="font-medium">{pet.color}</span></div>}
-                      {pet.weight && <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Weight className="h-4 w-4 text-primary" /><span className="text-muted-foreground">Weight:</span><span className="font-medium">{pet.weight}</span></div>}
-                      {pet.microchip_number && <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"><Cpu className="h-4 w-4 text-primary" /><span className="text-muted-foreground">Microchip:</span><span className="font-medium font-mono">{pet.microchip_number}</span></div>}
-                      <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm"><QrCode className="h-4 w-4 text-primary" /><span className="text-muted-foreground">Pet ID:</span><span className="font-medium font-mono text-primary">{(pet as any).pet_code || pet.id.slice(0, 10).toUpperCase()}</span></div>
+                      {pet.age && (
+                        <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-primary" />
+                            <span className="text-muted-foreground">Age:</span>
+                          </div>
+                          <span className="font-medium pl-6">{pet.age}</span>
+                        </div>
+                      )}
+                      {pet.color && (
+                        <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Palette className="h-4 w-4 text-primary" />
+                            <span className="text-muted-foreground">Color:</span>
+                          </div>
+                          <span className="font-medium pl-6">{pet.color}</span>
+                        </div>
+                      )}
+                      {pet.weight && (
+                        <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Weight className="h-4 w-4 text-primary" />
+                            <span className="text-muted-foreground">Weight:</span>
+                          </div>
+                          <span className="font-medium pl-6">{pet.weight}</span>
+                        </div>
+                      )}
+                      {pet.microchip_number && (
+                        <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Cpu className="h-4 w-4 text-primary" />
+                            <span className="text-muted-foreground">Microchip:</span>
+                          </div>
+                          <span className="font-medium font-mono break-all pl-6">{pet.microchip_number}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <QrCode className="h-4 w-4 text-primary" />
+                          <span className="text-muted-foreground">Pet ID:</span>
+                        </div>
+                        <span className="font-medium font-mono text-primary break-all pl-6">
+                          {(pet as any).pet_code || pet.id.slice(0, 10).toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
