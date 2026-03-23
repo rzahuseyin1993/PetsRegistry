@@ -13,13 +13,11 @@ import {
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import PetCard from "@/components/PetCard";
 import LostPetsBanner from "@/components/LostPetsBanner";
-
-const BarcodeScanner = lazy(() => import("react-qr-barcode-scanner"));
-
+import { Html5Qrcode } from "html5-qrcode";
 
 const features = [
   { icon: Heart, title: "Adopt a Pet", description: "Browse & adopt pets looking for a forever home. Owners can list pets and transfer ownership seamlessly.", color: "bg-rose-100 text-rose-600", to: "/adopt" },
@@ -31,37 +29,93 @@ const features = [
   { icon: Map, title: "Pet Map", description: "Find pet-friendly parks, vets & shops near you", color: "bg-sky-100 text-sky-600", to: "/pet-map" },
 ];
 
+// ✅ Shared hook — safe scanner that handles close at any time
+const useQRScanner = (
+  scannerId: string,
+  active: boolean,
+  onScanSuccess: (text: string) => void
+) => {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const mountedRef = useRef(false);
+  const isRunningRef = useRef(false);
+
+  useEffect(() => {
+    if (!active) return;
+
+    mountedRef.current = true;
+    isRunningRef.current = false;
+
+    const startScanner = async () => {
+      const el = document.getElementById(scannerId);
+      if (!el || !mountedRef.current) return;
+      try {
+        const scanner = new Html5Qrcode(scannerId);
+        scannerRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 },
+          (decodedText) => { if (mountedRef.current) onScanSuccess(decodedText); },
+          () => {}
+        );
+        if (mountedRef.current) {
+          isRunningRef.current = true;
+        } else {
+          try { await scanner.stop(); scanner.clear(); } catch (_) {}
+        }
+      } catch (err: any) {
+        isRunningRef.current = false;
+        console.error("QR Scanner error:", err);
+        if (mountedRef.current) toast.error("Could not access camera. Please allow camera permission.");
+      }
+    };
+
+    const timer = setTimeout(startScanner, 200);
+
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+      if (scannerRef.current && isRunningRef.current) {
+        isRunningRef.current = false;
+        scannerRef.current.stop()
+          .then(() => { try { scannerRef.current?.clear(); } catch (_) {} })
+          .catch(() => {})
+          .finally(() => { scannerRef.current = null; });
+      } else if (scannerRef.current) {
+        try { scannerRef.current.clear(); } catch (_) {}
+        scannerRef.current = null;
+      }
+    };
+  }, [active, scannerId, onScanSuccess]);
+};
+
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const navigate = useNavigate();
 
-  const handleScanResult = useCallback((err: any, result: any) => {
-    if (result) {
-      const scannedText = result.getText();
-      setShowScanner(false);
-      const petIdMatch = scannedText.match(/\/pet\/([a-f0-9-]+)/i);
-      if (petIdMatch) {
-        toast.success("Pet found! Redirecting...");
-        navigate(`/pet/${petIdMatch[1]}`);
-      } else if (scannedText.match(/^[a-f0-9-]{36}$/i)) {
-        toast.success("Pet found! Redirecting...");
-        navigate(`/pet/${scannedText}`);
-      } else {
-        setSearchQuery(scannedText);
-        toast.info("QR code scanned — searching...");
-      }
+  const handleScanSuccess = useCallback((scannedText: string) => {
+    setShowScanner(false);
+    const petIdMatch = scannedText.match(/\/pet\/([a-f0-9-]+)/i);
+    if (petIdMatch) {
+      toast.success("Pet found! Redirecting...");
+      navigate(`/pet/${petIdMatch[1]}`);
+    } else if (scannedText.match(/^[a-f0-9-]{36}$/i)) {
+      toast.success("Pet found! Redirecting...");
+      navigate(`/pet/${scannedText}`);
+    } else {
+      setSearchQuery(scannedText);
+      toast.info("QR code scanned — searching...");
     }
   }, [navigate]);
+
+  useQRScanner("home-qr-reader", showScanner, handleScanSuccess);
 
   const { data: recentPets = [] } = useQuery({
     queryKey: ["recent-pets"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("pets")
-        .select("*, pet_images(image_url, sort_order)")
-        .order("created_at", { ascending: false })
-        .limit(4);
+        .from("pets").select("*, pet_images(image_url, sort_order)")
+        .order("created_at", { ascending: false }).limit(4);
       if (error) throw error;
       return data;
     },
@@ -90,16 +144,12 @@ const Index = () => {
               <span className="h-2 w-2 rounded-full bg-success" />
               <span className="text-sm font-medium text-foreground">{stats?.pets || 0}+ Pets Protected Worldwide</span>
             </div>
-
             <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
-              The Global<br />
-              <span className="text-primary">Pet Registry</span>
+              The Global<br /><span className="text-primary">Pet Registry</span>
             </h1>
-
             <p className="mt-5 max-w-lg text-lg text-muted-foreground">
               Register, protect, adopt, and reunite pets worldwide. Your pet's digital passport, lost alerts, and more — all in one place.
             </p>
-
             <div className="mt-8 flex max-w-lg gap-2">
               <div className="flex flex-1 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                 <div className="flex flex-1 items-center gap-2 px-4">
@@ -108,8 +158,8 @@ const Index = () => {
                     placeholder="Search by Pet ID, name, microchip, or breed..."
                     className="border-0 bg-transparent shadow-none focus-visible:ring-0"
                     value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    onKeyDown={(event) => event.key === "Enter" && handleSearch()}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   />
                 </div>
                 <Button onClick={handleSearch} className="m-1.5 gap-2 rounded-lg">
@@ -130,58 +180,27 @@ const Index = () => {
             {showScanner && (
               <Card className="mt-4 max-w-lg overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="relative">
-                    <div className="flex items-center gap-2 bg-primary/10 px-4 py-3">
-                      <Camera className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-medium text-primary">Point your camera at the pet's QR code</span>
-                    </div>
-                     <div className="aspect-square w-full max-h-[300px]">
-                       <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
-                         <BarcodeScanner width="100%" height="100%" onUpdate={handleScanResult} />
-                       </Suspense>
-                     </div>
-                    <div className="pointer-events-none absolute inset-0 top-[48px] flex items-center justify-center">
-                      <div className="h-40 w-40 rounded-2xl border-4 border-primary/50" />
-                    </div>
+                  <div className="flex items-center gap-2 bg-primary/10 px-4 py-3">
+                    <Camera className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium text-primary">Point your camera at the pet's QR code</span>
+                  </div>
+                  <div style={{ width: "100%", minHeight: "250px" }}>
+                    <div id="home-qr-reader" style={{ width: "100%" }} />
                   </div>
                 </CardContent>
               </Card>
             )}
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link to="/register">
-                <Button className="gap-2 rounded-lg">
-                  <Shield className="h-4 w-4" /> Register Free
-                </Button>
-              </Link>
-              <Link to="/search">
-                <Button variant="outline" className="gap-2 rounded-lg">
-                  <Heart className="h-4 w-4" /> Adopt a Pet
-                </Button>
-              </Link>
-              <Link to="/store">
-                <Button variant="outline" className="gap-2 rounded-lg">
-                  <ShoppingCart className="h-4 w-4" /> Pet Store
-                </Button>
-              </Link>
+              <Link to="/register"><Button className="gap-2 rounded-lg"><Shield className="h-4 w-4" /> Register Free</Button></Link>
+              <Link to="/search"><Button variant="outline" className="gap-2 rounded-lg"><Heart className="h-4 w-4" /> Adopt a Pet</Button></Link>
+              <Link to="/store"><Button variant="outline" className="gap-2 rounded-lg"><ShoppingCart className="h-4 w-4" /> Pet Store</Button></Link>
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative hidden lg:block"
-          >
+          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} className="relative hidden lg:block">
             <div className="relative overflow-hidden rounded-2xl shadow-xl">
-              <img
-                src="https://images.unsplash.com/photo-1552053831-71594a27632d?w=600&h=500&fit=crop&fm=webp"
-                alt="Registered Pet"
-                className="aspect-[4/3] w-full object-cover"
-                width={612}
-                height={459}
-                
-              />
+              <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?w=600&h=500&fit=crop&fm=webp" alt="Registered Pet" className="aspect-[4/3] w-full object-cover" width={612} height={459} />
               <div className="absolute left-4 top-4 flex items-center gap-3 rounded-xl bg-card/95 px-4 py-3 shadow-lg backdrop-blur-sm">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <QrCode className="h-5 w-5 text-primary" />
@@ -206,19 +225,12 @@ const Index = () => {
     <>
       <section className="border-t border-border bg-muted/30 py-16">
         <div className="container">
-          <h2 className="text-center font-display text-3xl font-bold text-foreground">
-            Everything Your Pet Needs
-          </h2>
+          <h2 className="text-center font-display text-3xl font-bold text-foreground">Everything Your Pet Needs</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
+                <motion.div key={feature.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }}>
                   <Link to={feature.to}>
                     <Card className="group h-full border-border bg-card transition-all hover:-translate-y-0.5 hover:shadow-md">
                       <CardContent className="flex items-center gap-4 p-5">
@@ -226,9 +238,7 @@ const Index = () => {
                           <Icon className="h-6 w-6" />
                         </div>
                         <div>
-                          <h3 className="font-display text-base font-semibold text-card-foreground">
-                            {feature.title}
-                          </h3>
+                          <h3 className="font-display text-base font-semibold text-card-foreground">{feature.title}</h3>
                           <p className="mt-0.5 text-sm text-muted-foreground">{feature.description}</p>
                         </div>
                       </CardContent>
@@ -242,8 +252,6 @@ const Index = () => {
       </section>
 
       <LostPetsBanner />
-
-      
 
       <section className="py-12">
         <div className="container">
@@ -278,23 +286,15 @@ const Index = () => {
           <div className="container">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-2xl font-bold text-foreground">Recently Registered</h2>
-              <Link to="/search" className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                View All <ArrowRight className="h-4 w-4" />
-              </Link>
+              <Link to="/search" className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">View All <ArrowRight className="h-4 w-4" /></Link>
             </div>
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {recentPets.map((pet) => {
                 const firstImage = (pet.pet_images || []).sort((a: any, b: any) => a.sort_order - b.sort_order)[0];
                 return (
-                  <PetCard
-                    key={pet.id}
-                    id={pet.id}
-                    name={pet.name}
-                    species={pet.species}
-                    breed={pet.breed || ""}
-                    image={firstImage?.image_url || "/placeholder.svg"}
-                    status={pet.status as "registered" | "lost" | "found"}
-                  />
+                  <PetCard key={pet.id} id={pet.id} name={pet.name} species={pet.species}
+                    breed={pet.breed || ""} image={firstImage?.image_url || "/placeholder.svg"}
+                    status={pet.status as "registered" | "lost" | "found"} />
                 );
               })}
             </div>
@@ -304,23 +304,13 @@ const Index = () => {
 
       <section className="bg-primary py-16">
         <div className="container text-center">
-          <h2 className="font-display text-3xl font-bold text-primary-foreground">
-            Protect Your Pet Today
-          </h2>
+          <h2 className="font-display text-3xl font-bold text-primary-foreground">Protect Your Pet Today</h2>
           <p className="mx-auto mt-3 max-w-lg text-primary-foreground/80">
             Registration is free. Get a QR code profile and help ensure your pet can always find its way home.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register">
-              <Button size="lg" className="rounded-lg bg-accent text-accent-foreground hover:bg-accent/90">
-                Get Started Free
-              </Button>
-            </Link>
-            <Link to="/search">
-              <Button size="lg" variant="outline" className="rounded-lg border-primary-foreground/30 text-primary-foreground bg-primary/10 hover:bg-primary-foreground/10">
-                Browse Pets
-              </Button>
-            </Link>
+            <Link to="/register"><Button size="lg" className="rounded-lg bg-accent text-accent-foreground hover:bg-accent/90">Get Started Free</Button></Link>
+            <Link to="/search"><Button size="lg" variant="outline" className="rounded-lg border-primary-foreground/30 text-primary-foreground bg-primary/10 hover:bg-primary-foreground/10">Browse Pets</Button></Link>
           </div>
         </div>
       </section>
